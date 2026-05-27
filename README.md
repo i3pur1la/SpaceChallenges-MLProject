@@ -57,7 +57,8 @@ below show two views of the reconstructed scene.
 
 ## Results
 
-![Per-image rotation and translation error](results/fig1_comparison.png)
+![SIFT+PnP per-image error](results/sift_pnp_errors.png)
+![Per-image comparison: SIFT+PnP vs 3DGS-aided](results/fig1_comparison.png)
 ![Summary statistics](results/fig2_summary.png)
 ![3D camera position estimates vs ground truth](results/fig3_trajectory.png)
 
@@ -142,13 +143,16 @@ SuperPoint+LightGlue → retrieve closest render
 ├── reconstruction/
 │   ├── colmap/            # COLMAP sparse model
 │   └── 3dgs/              # Gaussian splat outputs & renders
-├── pipeline/
-│   ├── sift_pnp.py        # Classical baseline
-│   ├── 3dgs_aided.py      # 3DGS retrieval pipeline
-│   └── evaluate.py        # Metric computation & plots
+├── scripts/
+│   ├── sift_pnp.py        # SIFT+PnP baseline pipeline
+│   ├── gs_pose.py         # 3DGS-aided pipeline
+│   ├── evaluate.py        # Metric computation and plots
+│   ├── ground_truth.py    # ArUco ground truth extraction
+│   └── final_report.py    # Final report and figure generation
 ├── results/
 │   ├── colmap_view1.png
 │   ├── colmap_view2.png
+│   ├── sift_pnp_errors.png
 │   ├── fig1_comparison.png
 │   ├── fig2_summary.png
 │   ├── fig3_trajectory.png
@@ -165,14 +169,20 @@ git clone https://github.com/i3pur1la/SpaceChallenges-MLProject.git
 cd SpaceChallenges-MLProject
 pip install -r requirements.txt
 
-# 2. Run the SIFT+PnP baseline
-python pipeline/sift_pnp.py --test_dir data/test/ --output results/
+# 2. Extract ground truth poses from ArUco board
+python scripts/ground_truth.py
 
-# 3. Run the 3DGS-aided pipeline
-python pipeline/3dgs_aided.py --renders reconstruction/3dgs/renders/ --output results/
+# 3. Run the SIFT+PnP baseline
+python scripts/sift_pnp.py
 
-# 4. Evaluate and generate plots
-python pipeline/evaluate.py
+# 4. Run the 3DGS-aided pipeline
+python scripts/gs_pose.py
+
+# 5. Evaluate and generate plots
+python scripts/evaluate.py
+
+# 6. Generate the final report and figures
+python scripts/final_report.py
 ```
 
 > **Note:** 3DGS training requires a CUDA-capable GPU. CUDA compilation on Windows
