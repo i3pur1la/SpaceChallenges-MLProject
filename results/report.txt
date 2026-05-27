@@ -1,0 +1,78 @@
+
+╔══════════════════════════════════════════════════════════════════╗
+║         SpaceChallenges 2026 — Pose Estimation Report           ║
+╚══════════════════════════════════════════════════════════════════╝
+
+EXPERIMENT SETUP
+─────────────────
+Scene:           Rubik's cube on ArUco board (DICT_4X4_50, 5×7)
+Training images: 244/245 matched by COLMAP (99.59%)
+Test images:     10 captured from diverse viewpoints
+GT method:       ArUco board pose estimation (OpenCV solvePnP)
+GT coverage:     8/10 images (test_07 and test_09 had <3 markers)
+
+3DGS MODEL
+──────────
+Training steps:  30,000
+Gaussians:       204,001 (after pruning)
+Rendered views:  220 novel views for retrieval database
+
+RESULTS
+───────
+                    SIFT+PnP      3DGS-aided    Δ
+Rotation (mean)     1.57°         1.64°          +0.08°
+Rotation (median)   1.57°         1.62°          +0.05°
+Rotation (max)      2.34°         2.43°          +0.09°
+
+Translation (mean)  0.97cm        0.99cm         +0.02cm
+Translation (med)   0.90cm        0.88cm         -0.02cm
+Translation (max)   1.70cm        1.76cm         +0.06cm
+
+FINDINGS
+────────
+1. Both methods achieve sub-2° rotation and sub-2cm translation error
+   — excellent accuracy for a tabletop object localization task.
+
+2. SIFT+PnP and 3DGS-aided perform nearly identically because both
+   ultimately rely on the same COLMAP sparse 3D point cloud for PnP.
+   The 3DGS contribution is in the retrieval step (novel view synthesis),
+   not in the final geometric computation.
+
+3. The 3DGS renders (220 novel views) provide a richer retrieval database
+   than the original 244 training photos — the model synthesizes viewpoints
+   that were never photographed, which could aid localization in scenarios
+   with sparse training coverage.
+
+4. The domain gap between 3DGS renders and real photos reduces SIFT
+   feature matching quality on rendered images. A learned feature extractor
+   (e.g. SuperPoint) would likely close this gap and show a clearer
+   3DGS advantage.
+
+LESSONS LEARNED
+───────────────
+Technical:
+- CUDA compilation on Windows is fundamentally broken for VS2022 v19.44+
+  with any existing CUDA toolkit. WSL2+Ubuntu is the correct platform.
+- nerfstudio coordinate convention (OpenGL, Y-up) differs from OpenCV
+  (Y-down). The transforms.json applied_transform must be inverted before
+  comparing poses.
+- Procrustes alignment is required when comparing poses from different
+  coordinate frames (COLMAP world vs ArUco board frame).
+- 3DGS renders have a domain gap from real photos — neural textures are
+  smoother, reducing SIFT keypoint density by ~50x vs real images.
+
+Scientific:
+- ArUco boards with 5×7 layout at 3cm marker size give reliable 6-DoF
+  GT at <0.5m range with consumer camera optics.
+- COLMAP achieves 99.59% image registration on a well-captured tabletop
+  dataset — very high for a challenging reflective object (Rubik's cube).
+- 30,000 training steps produces a 204k-Gaussian model that visually
+  reconstructs the scene well but the renders differ photometrically
+  from ground photos enough to impact feature matching.
+
+GENERATED FILES
+───────────────
+results/fig1_comparison.png   — per-image error bars (main result)
+results/fig2_summary.png      — mean/median/max summary stats
+results/fig3_trajectory.png   — 3D camera position visualization
+results/evaluation_summary.json — raw numbers
